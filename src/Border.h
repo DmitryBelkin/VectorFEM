@@ -1,142 +1,128 @@
-#ifndef FILE_BORDER_H
-#define FILE_BORDER_H
+#ifndef BORDER_H
+#define BORDER_H
 
-#include "Comparator.h"
-#include "LA_Matrix.h"
-#include "LA_Vector.h"
+#include "MatrixVectorOP.h"
 #include "Problem.h"
-#include "Quadrature.h"
+#include "Integrate.h"
+#include <cstdint>
 
 class Border 
 {
 public:
-	int type;
-	double sign;
-	double x0, x1, y0, y1;
-	unsigned int bf[NUMBER_OF_BORDER_BASIS_FUNCTIONS];
+	uint32_t m_type;
+	double   m_sign;
+	double   m_x0, m_x1, m_y0, m_y1;
+	uint32_t m_bf[amountBorderBf];
 
 	Border();
-	Border(int, double, double, double, double, double, unsigned int[NUMBER_OF_BORDER_BASIS_FUNCTIONS]);
+	Border(int, double, double, double, double, double, uint32_t[amountBorderBf]);
 	pair<double, double> tao() const;
-	double psitao(int, double) const;
+	double psitao(uint32_t, double) const;
 };
-
 
 class BorderMethod 
 {
 public:
-	static void calculateDirichletVector(const Border& base, LA_Vector& vect) 
+	static void calculateDirichletVector(const Border& base, Vctr& vect) 
 	{
-		LA_Matrix matrix(NUMBER_OF_BORDER_BASIS_FUNCTIONS);
-		LA_Vector right_side(NUMBER_OF_BORDER_BASIS_FUNCTIONS);
+		Mtrx matrix(amountBorderBf);
+		Vctr right_side(amountBorderBf);
 
-		for (int i = 0; i < NUMBER_OF_BORDER_BASIS_FUNCTIONS; i++) {
+		for (uint32_t i = 0; i < amountBorderBf; ++i) 
+		{
 			right_side.element[i] += calculateRightSideElement(i, base);
-			for (int j = 0; j < NUMBER_OF_BORDER_BASIS_FUNCTIONS; j++) {
+			for (uint32_t j = 0; j < amountBorderBf; ++j) 
 				matrix.element[i][j] = calculateMassMatrixElement(i, j, base);
-			}
 		}
 		solveLU(matrix, right_side, vect);
 	}
 
-	static void calculateNeumannVector(const Border& base, LA_Vector& vect) 
+	static void calculateNeumannVector(const Border& base, Vctr& vect) 
 	{
-		for (int i = 0; i < NUMBER_OF_BORDER_BASIS_FUNCTIONS; i++) {
+		for (uint32_t i = 0; i < amountBorderBf; ++i)
 			vect.element[i] += calculateBoundaryElement(i, base);
-		}
 	}
 
 private:
 	static double calculateMassMatrixElement(int i, int j, const Border& base) 
 	{
-		double hx = base.x1 - base.x0;
-		double hy = base.y1 - base.y0;
-		double h = sqrt(hx * hx + hy * hy);
-		double res = Quadrature::gauss5_1d(
-			0, 
-			1.0, 
-			[&] (double t) {
-				double x = (1.0 - t) * base.x0 + t * base.x1;
-				double y = (1.0 - t) * base.y0 + t * base.y1;
-
-				return h * base.psitao(i, t) * base.psitao(j, t);}
-		);
+		const double hx = base.m_x1 - base.m_x0;
+		const double hy = base.m_y1 - base.m_y0;
+		const double h = sqrt(hx * hx + hy * hy);
+		const double res = Integrate::gauss5_1d(0, 1.0, [&] (double t) 
+		{
+			return h * base.psitao(i, t) * base.psitao(j, t);
+		});
 
 		return res;
 	}
 
 	static double calculateRightSideElement(int i, const Border& base) 
 	{
-		double hx = base.x1 - base.x0;
-		double hy = base.y1 - base.y0;
-		double h = sqrt(hx * hx + hy * hy);
-		double res = Quadrature::gauss5_1d(
-			0, 
-			1.0, 
-			[&] (double t) {
-				double x = (1.0 - t) * base.x0 + t * base.x1;
-				double y = (1.0 - t) * base.y0 + t * base.y1;
-
-				return h * base.psitao(i, t) * Problem::firstBoundary(x, y, base.tao());}
-		);
+		const double hx = base.m_x1 - base.m_x0;
+		const double hy = base.m_y1 - base.m_y0;
+		const double h = sqrt(hx * hx + hy * hy);
+		const double res = Integrate::gauss5_1d(0, 1.0, [&] (double t)
+		{
+			const double x = (1.0 - t) * base.m_x0 + t * base.m_x1;
+			const double y = (1.0 - t) * base.m_y0 + t * base.m_y1;
+			return h * base.psitao(i, t) * Problem::firstBoundary(x, y, base.tao());
+		});
 
 		return res;
 	}
 
-	static double calculateBoundaryElement(int i, const Border& base) 
+	static double calculateBoundaryElement(uint32_t i, const Border& base) 
 	{
-		double hx = base.x1 - base.x0;
-		double hy = base.y1 - base.y0;
-		double h = sqrt(hx * hx + hy * hy);
-		double res = Quadrature::gauss5_1d(
-			0, 
-			1.0, 
-			[&] (double t) {
-				double x = (1.0 - t) * base.x0 + t * base.x1;
-				double y = (1.0 - t) * base.y0 + t * base.y1;
-
-				return h * Problem::etta(x, y) * base.psitao(i, t) / Problem::mu(x, y);}
-		);
+		const double hx = base.m_x1 - base.m_x0;
+		const double hy = base.m_y1 - base.m_y0;
+		const double h = sqrt(hx * hx + hy * hy);
+		const double res = Integrate::gauss5_1d(0, 1.0, [&] (double t) 
+		{
+			const double x = (1.0 - t) * base.m_x0 + t * base.m_x1;
+			const double y = (1.0 - t) * base.m_y0 + t * base.m_y1;
+			return h * Problem::etta(x, y) * base.psitao(i, t) / Problem::mu(x, y);
+		});
 
 		return res;
 	}
 
-	static void solveLU(LA_Matrix A, LA_Vector b, LA_Vector& x) 
+	static void solveLU(Mtrx A, Vctr b, Vctr& x) 
 	{
-		int N = NUMBER_OF_BORDER_BASIS_FUNCTIONS;
+		const uint32_t N = amountBorderBf;
 		vector<vector<double>> LU(N, vector<double>(N));
 		vector<double> y(N);
 
-		for (int i = 0; i < N; i++) {		
-			for (int j = i; j < N; j++) {
+		for (uint32_t i = 0; i < N; ++i) 
+		{
+			for (uint32_t j = i; j < N; ++j) 
+			{
 				LU[i][j] = A.element[i][j];
-				for (int k = 0; k < i; k++) {
+				for (uint32_t k = 0; k < i; ++k) 
 					LU[i][j] -= LU[i][k] * LU[k][j];
-				}
 			}
-			for (int j = i + 1; j < N; j++) {
+			for (uint32_t j = i + 1; j < N; ++j) 
+			{
 				LU[j][i] = A.element[j][i];
-				for (int k = 0; k < i; k++) {
+				for (uint32_t k = 0; k < i; ++k) 
 					LU[j][i] -= LU[j][k] * LU[k][i];
-				}
 				LU[j][i] /= LU[i][i];
 			}
 		}
-		for (int i = 0; i < N; i++) {
+		for (uint32_t i = 0; i < N; ++i) 
+		{
 			y[i] = b.element[i];
-			for (int k = 0; k < i; k++) {
+			for (uint32_t k = 0; k < i; ++k) 
 				y[i] -= y[k] * LU[i][k];
-			}
 		}
-		for (int i = 0; i < N; i++) {
+		for (uint32_t i = 0; i < N; ++i) 
+		{
 			x.element[N - i - 1] = y[N - i - 1];
-			for (int k = N - i; k < N; k++) {
+			for (uint32_t k = N - i; k < N; ++k)
 				x.element[N - i - 1] -= x.element[k] * LU[N - i - 1][k];
-			}
 			x.element[N - i - 1] /= LU[N - i - 1][N - i - 1];
 		}
 	}
 };
 
-
-#endif
+#endif BORDER_H
