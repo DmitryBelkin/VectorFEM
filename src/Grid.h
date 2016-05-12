@@ -1,39 +1,34 @@
-#ifndef FILE_GRID_H
-#define FILE_GRID_H
-
-#include <fstream>
-#include <string>
-#include <vector>
-using namespace std;
+#ifndef GRID_H
+#define GRID_H
 
 #include "Border.h"
-#include "Element.h"
-
-#define EPS 1e-20
+#include "FE.h"
+#include <string>
+#include <vector>
 
 class Grid
 {
 public:
-	int number_of_bf;
-	vector<Border> border;
-	vector<Element> element;
+	Grid() {};
 
-	Grid();
+	int number_of_bf;
+	std::vector<Border > border;
+	std::vector<FE> element;
 };
 
 class RectangleGridGenerator
 {
 public:
-	void generateFromFiles(Grid& grid, string, string);
-	void buildElements(Grid& grid, double*, double*);
-	void buildBorders(Grid& grid, string, double*, double*);
-	void resizeGrid(Grid& grid);
-	void getBfidForElement(unsigned int*, int, int);
-	void getBfidForBorder(unsigned int*, int);
+	void generateFromFiles(Grid& grid, const std::string, const std::string);
+	void buildElements    (Grid& grid, double*          , double*);
+	void buildBorders     (Grid& grid, const std::string, double*, double*);
+	void resizeGrid       (Grid& grid);
+	void getBfidForElement(unsigned int*, const int, const int) const;
+	void getBfidForBorder (unsigned int*, const int           ) const;
 	
 private:
-	int nx, ny;
-	double x0, x1, y0, y1;
+	uint32_t m_nx, m_ny;
+	double   m_x0, m_x1, m_y0, m_y1;
 };
 
-#endif
+#endif GRID_H
